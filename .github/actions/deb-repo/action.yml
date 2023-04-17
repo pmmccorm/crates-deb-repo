@@ -1,0 +1,37 @@
+name: deb-repo
+description: "Make a debian repo from a directory of .debs"
+inputs:
+  repo_dir:
+    required: true
+    type: string
+  deb_dir:
+    required: true
+    type: string
+  private_key:
+    required: true
+    type: string
+  private_key_email:
+    required: true
+    type: string
+runs:
+  using: "composite"
+  steps:
+    - name: Create repo
+      shell: sh
+      run: |
+        ls -la
+        mkdir -p ${{ inputs.repo_dir }}
+        sudo apt-get install -y gpg dpkg-dev
+
+        echo "${{ inputs.private_key }}" > private.asc
+
+        gpg --import private.asc
+        gpg --export ${{ inputs.private_key_email }} > ${{ inputs.repo_dir }}/public.gpg
+
+        cp ${{ inputs.deb_dir }}/*.deb ${{ inputs.repo_dir }}
+
+        cd ${{ inputs.repo_dir }}
+        dpkg-scanpackages --multiversion . > Packages
+        apt-ftparchive release . > Release
+        gpg --default-key "${{ inputs.private_key_email }}" -abs -o - Release > Release.gpg
+        gpg --default-key "${{ inputs.private_key_email }}" --clearsign -o - Release > InRelease

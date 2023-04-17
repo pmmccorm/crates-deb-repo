@@ -1,0 +1,38 @@
+name: deb-repo
+description: "Make a debian packages from a list of cargo-hosted binaries"
+inputs:
+  cargo_bins:
+    required: true
+    type: string
+  deb_dir:
+    required: true
+    type: string
+    default: "debs"
+runs:
+  using: "composite"
+  steps:
+    - name: Create repo
+      shell: bash
+      run: |
+        set -x
+        function latest_ver() {
+          curl -L https://crates.io/api/v1/crates/$1/versions | jq -r '.versions[] | select (.yanked == false) | .num' | sort -V | tail -1
+        }
+        function get_crate() {
+          curl -L https://crates.io/api/v1/crates/$1/$2/download | gunzip | tar -xf -
+        }
+        DEBS=$PWD/${{ inputs.deb_dir }}
+        mkdir -p $DEBS
+        sudo apt-get update
+        sudo apt-get install -y rustc cargo 
+        cargo install cargo-deb
+        for crate in ${{ inputs.cargo_bins }}; do
+          ver=$(latest_ver $crate)
+          echo "$crate $ver"
+          get_crate $crate $ver
+          pushd $crate-$ver
+          cargo deb -o $DEBS
+          popd
+        done
+
+        du -h $DEBS
