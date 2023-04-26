@@ -36,7 +36,7 @@ jobs:
       - name: generate debs from crate binaries
         uses: ./.github/actions/cargo-deb
         with:
-          cargo_bins: "mcfly hyperfine"
+          cargo_bins: "mcfly hyperfine ripfind"
           deb_dir: 'debs'
       - name: generate deb repository
         uses: ./.github/actions/deb-repo
